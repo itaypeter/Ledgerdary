@@ -9,16 +9,60 @@ import {
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');`;
 
 const CAT_RULES = [
-  { keywords: ["migros","coop","lidl","aldi","denner","spar","volg","leshop"], cat: "Groceries" },
-  { keywords: ["restaurant","cafe","tibits","mcdonalds","pizza","sushi","kebab","mittag","lunch","essen","takeaway"], cat: "Lunch/Dining" },
-  { keywords: ["sbb","zvv","mobility","postbus","bls","postauto","tpg","bernmobil"], cat: "Transport" },
-  { keywords: ["spotify","netflix","disney","amazon prime","youtube premium","steam","playstation","kino","cinema"], cat: "Entertainment" },
-  { keywords: ["apotheke","arzt","zahnarzt","physio","hospital","spital","helsana","css","swica","sanitas","visana"], cat: "Health" },
-  { keywords: ["swisscom","sunrise","salt","upc","quickline"], cat: "Phone/Internet" },
-  { keywords: ["ewz","ewb","stadtwerke","strom","gas","elektrizitat"], cat: "Utilities" },
-  { keywords: ["zara","h&m","uniqlo","zalando","ikea","galaxus","digitec","manor"], cat: "Shopping" },
-  { keywords: ["schulgebühren","schulgeld","schulbedarf","schulmaterial","lernmaterial","lehrmittel","kita","krippe","tagesstätte","hort","nachhilfe","schulreise","klassenlager","schulkasse"], cat: "Child/School" },
-  { keywords: ["kinderarzt","kinderarztpraxis","pediatrics","zahnarzt kind","kinderkleidung","kinderschuhe","baby","toys","spielzeug","migros kids","h&m kids","zara kids","gap kids"], cat: "Child/Other" },
+  // Groceries — Swiss & Israeli supermarkets
+  { keywords: ["migros","coop","lidl","aldi","denner","spar","volg","leshop","pick pay","globus food",
+    "supermarket","minimarkt","lebensmittel","superpharma",
+    "rami levi","shufersal","victory","osher ad","yochananof","mega","tiv taam","makolet"], cat: "Groceries" },
+
+  // Lunch / Dining — restaurants, takeaway, cafes
+  { keywords: ["restaurant","cafe","café","tibits","mcdonalds","mcdonald","burger king","subway","starbucks",
+    "pizza","sushi","kebab","falafel","shawarma","hummus","mittag","lunch","essen","takeaway","takeout",
+    "lieferando","uber eats","wolt","just eat","foodora","ten bis","10bis",
+    "bistro","brasserie","trattoria","osteria","canteen","kantine","mensa"], cat: "Lunch/Dining" },
+
+  // Transport — Swiss & Israeli public transport + ride share
+  { keywords: ["sbb","zvv","mobility","postbus","bls","postauto","tpg","bernmobil","rbs","sob","thurbo",
+    "parking","parkhaus","parkplatz","vignette","autobahn",
+    "uber","lyft","taxi","bolt","gett",
+    "egged","dan bus","metropoline","kavim","rav kav"], cat: "Transport" },
+
+  // Entertainment
+  { keywords: ["spotify","netflix","disney","amazon prime","youtube premium","steam","playstation","xbox",
+    "kino","cinema","theater","theatre","concert","museum","zoo","ticket","eventim","ticketmaster",
+    "apple tv","hbo","paramount","peacock"], cat: "Entertainment" },
+
+  // Health — Swiss & Israeli
+  { keywords: ["apotheke","pharmacy","pharmacia","arzt","zahnarzt","physio","physiotherpeut",
+    "hospital","spital","klinik","clinic","doktor","doctor","optiker","optician",
+    "helsana","css","swica","sanitas","visana","concordia","atupri","groupe mutuel",
+    "maccabi","clalit","leumit","meuhedet","kupat holim"], cat: "Health" },
+
+  // Phone / Internet
+  { keywords: ["swisscom","sunrise","salt mobile","salt.ch","upc","quickline","wingo","yallo",
+    "partner communications","hot mobile","cellcom","bezeq","012","019"], cat: "Phone/Internet" },
+
+  // Utilities
+  { keywords: ["ewz","ewb","stadtwerke","strom","gas","elektrizitat","electricity","water","wasser",
+    "heizung","heating","nebenkosten","utility","entsorgung"], cat: "Utilities" },
+
+  // Shopping — clothes, electronics, home
+  { keywords: ["zara","h&m","uniqlo","zalando","about you","asos","mango","pull&bear",
+    "ikea","galaxus","digitec","manor","jelmoli","globus","fnac","mediamarkt","interdiscount",
+    "amazon","aliexpress","ebay","wish",
+    "castro","fox","renuar","golf","honigman"], cat: "Shopping" },
+
+  // Finance — transfers, fees, ATM
+  { keywords: ["twint","paypal","wise","transferwise","revolut","western union",
+    "atm","bancomat","cash withdrawal","gebühr","fee","zinsen","interest",
+    "kontoführung","annual fee","jahresgebühr"], cat: "Transfers" },
+
+  // Israeli-specific
+  { keywords: ["bit payment","pepper","max mastercard","leumi card","cal card","isracard","visa cal",
+    "arnona","property tax","mas hakhnasa","bituah leumi"], cat: "Other" },
+
+  // Child
+  { keywords: ["schulgebühren","schulgeld","schulbedarf","kita","krippe","hort","nachhilfe","schulreise","klassenlager"], cat: "Child/School" },
+  { keywords: ["kinderarzt","kinderkleidung","kinderschuhe","baby","spielzeug"], cat: "Child/Other" },
 ];
 
 const CAT_COLORS = {
@@ -56,11 +100,11 @@ const DEFAULT_INVESTMENTS = [
   { id:"i3", name:"Israeli Stocks (Max)",      value:9200,  gain:-180,  pct:-1.9, currency:"₪",  icon:"📉" },
 ];
 
-const ACCOUNTS = [
-  { id:"max",   name:"Max Mastercard", bank:"Israeli Account",    balance:4820.50, currency:"₪",  color:"#E4003A", icon:"🇮🇱" },
-  { id:"neon",  name:"Neon",           bank:"Neon + Investments", balance:12340.80,currency:"CHF", color:"#00C896", icon:"🟢" },
-  { id:"twint", name:"Twint",          bank:"Mobile Payments",    balance:287.40,  currency:"CHF", color:"#0066FF", icon:"💙" },
-  { id:"sbb",   name:"SBB",            bank:"Travel Account",     balance:156.00,  currency:"CHF", color:"#E84040", icon:"🚆" },
+const DEFAULT_ACCOUNTS = [
+  { id:"max",   name:"Max Mastercard", bank:"Israeli Account",    balance:0, currency:"₪",  color:"#E4003A", icon:"🇮🇱" },
+  { id:"neon",  name:"Neon",           bank:"Neon + Investments", balance:0, currency:"CHF", color:"#00C896", icon:"🟢" },
+  { id:"twint", name:"Twint",          bank:"Mobile Payments",    balance:0, currency:"CHF", color:"#0066FF", icon:"💙" },
+  { id:"sbb",   name:"SBB",            bank:"Travel Account",     balance:0, currency:"CHF", color:"#E84040", icon:"🚆" },
 ];
 
 const TABS = [
@@ -134,9 +178,16 @@ function TipCard({ tip }) {
     </div>
   );
 }
-function AccountCard({ acc, active, onClick }) {
+function AccountCard({ acc, active, onClick, onEditBalance }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(acc.balance));
+  const commit = () => {
+    const n = parseFloat(val.replace(/[^0-9.]/g,""));
+    if (!isNaN(n)) onEditBalance(acc.id, n);
+    setEditing(false);
+  };
   return (
-    <div onClick={onClick} style={{
+    <div onClick={()=>{ if(!editing) onClick(); }} style={{
       background:active?acc.color:"#FFFFFF",
       border:`1px solid ${active?acc.color:"#EAE7E1"}`,
       borderRadius:14,padding:"17px 19px",cursor:"pointer",
@@ -146,9 +197,25 @@ function AccountCard({ acc, active, onClick }) {
       <div style={{ fontSize:18,marginBottom:8 }}>{acc.icon}</div>
       <div style={{ fontFamily:"Syne",fontWeight:700,fontSize:12,color:active?"#fff":"#1C1917" }}>{acc.name}</div>
       <div style={{ fontFamily:"DM Mono",fontSize:10,color:active?"rgba(255,255,255,0.65)":"#A8A29E",marginBottom:10 }}>{acc.bank}</div>
-      <div style={{ fontFamily:"DM Mono",fontWeight:500,fontSize:17,color:active?"#fff":"#1C1917" }}>
-        {acc.currency} {acc.balance.toLocaleString("de-CH",{minimumFractionDigits:2})}
-      </div>
+      {editing ? (
+        <div onClick={e=>e.stopPropagation()} style={{ display:"flex",alignItems:"center",gap:4 }}>
+          <input autoFocus value={val} onChange={e=>setVal(e.target.value)}
+            onBlur={commit} onKeyDown={e=>e.key==="Enter"&&commit()}
+            style={{ width:"100%",fontFamily:"DM Mono",fontWeight:500,fontSize:15,
+              background:"rgba(255,255,255,0.25)",border:"none",
+              borderBottom:`2px solid ${active?"#fff":"#C8102E"}`,
+              color:active?"#fff":"#1C1917",padding:"2px 0",outline:"none" }} />
+        </div>
+      ) : (
+        <div style={{ display:"flex",alignItems:"baseline",gap:6 }}>
+          <div style={{ fontFamily:"DM Mono",fontWeight:500,fontSize:17,color:active?"#fff":"#1C1917" }}>
+            {acc.currency} {acc.balance>0 ? acc.balance.toLocaleString("de-CH",{minimumFractionDigits:2}) : "—"}
+          </div>
+          <div onClick={e=>{ e.stopPropagation(); setVal(String(acc.balance)); setEditing(true); }}
+            style={{ fontSize:10,color:active?"rgba(255,255,255,0.6)":"#C4BDB7",cursor:"pointer" }}
+            title="Click to update balance">✏️</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -219,6 +286,8 @@ export default function App() {
   ]);
   const [groceryReceipts, setGR]  = useState([]);
   const [budgets, setBudgets]     = useState(DEFAULT_BUDGETS);
+  const [accounts, setAccounts]   = useState(DEFAULT_ACCOUNTS);
+  const [editingAcc, setEditingAcc] = useState(null);
   const [loaded, setLoaded]       = useState(false);
   const [subs, setSubs]             = useState(DEFAULT_SUBS);
   const [investments, setInvestments] = useState(DEFAULT_INVESTMENTS);
@@ -280,6 +349,7 @@ export default function App() {
   useEffect(() => { if (loaded) api.setSetting("investments", investments).catch(()=>{}); }, [investments, loaded]);
   useEffect(() => { if (loaded) api.setSetting("income", monthlyIncome).catch(()=>{}); }, [monthlyIncome, loaded]);
   useEffect(() => { if (loaded) api.setSetting("childname", childName).catch(()=>{}); }, [childName, loaded]);
+  useEffect(() => { if (loaded) api.setSetting("accounts", accounts).catch(()=>{}); }, [accounts, loaded]);
 
   const now = new Date();
   const cm = now.getMonth(), cy = now.getFullYear();
@@ -487,7 +557,8 @@ export default function App() {
           {tab==="overview" && <>
             <SL>Accounts</SL>
             <div style={{ display:"flex",gap:10,flexWrap:"wrap",marginBottom:24 }}>
-              {ACCOUNTS.map(a=><AccountCard key={a.id} acc={a} active={activeAcc===a.id} onClick={()=>setActiveAcc(a.id)} />)}
+              {accounts.map(a=><AccountCard key={a.id} acc={a} active={activeAcc===a.id} onClick={()=>setActiveAcc(a.id)}
+                onEditBalance={(id,val)=>setAccounts(prev=>prev.map(x=>x.id===id?{...x,balance:val}:x))} />)}
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24 }}>
               <StatCard label="Spent This Month" value={transactions.length?`CHF ${totalSpend.toFixed(0)}`:"—"} sub={`${monthlyTx.length} transactions`} />
@@ -1154,7 +1225,7 @@ export default function App() {
             {/* Account picker */}
             <div style={{ fontFamily:"Syne",fontWeight:600,fontSize:10,color:"#A8A29E",letterSpacing:1,textTransform:"uppercase",marginBottom:8 }}>Account</div>
             <div style={{ display:"flex",gap:8,marginBottom:22 }}>
-              {ACCOUNTS.map(a=>(
+              {accounts.map(a=>(
                 <button key={a.id} onClick={()=>setQl(p=>({...p,acc:a.id}))} style={{
                   flex:1, background: ql.acc===a.id ? a.color : "#F5F3EF",
                   border:`1px solid ${ql.acc===a.id ? a.color : "#EAE7E1"}`,
@@ -1296,7 +1367,7 @@ export default function App() {
             <div style={{ marginBottom:18 }}>
               <div style={{ fontFamily:"Syne",fontWeight:600,fontSize:10,color:"#303030",letterSpacing:1,marginBottom:8 }}>SELECT ACCOUNT</div>
               <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                {ACCOUNTS.map(a=>(
+                {accounts.map(a=>(
                   <button key={a.id} onClick={()=>setCsvAccId(a.id)} style={{ flex:"1 1 auto",background:csvAccId===a.id?a.color:"#F5F3EF",border:`1px solid ${csvAccId===a.id?a.color:"#D9D5CE"}`,color:csvAccId===a.id?"#fff":"#44403C",borderRadius:8,padding:"7px 10px",cursor:"pointer",fontFamily:"Syne",fontWeight:600,fontSize:11,transition:"all 0.15s" }}>{a.icon} {a.name}</button>
                 ))}
               </div>
