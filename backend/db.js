@@ -13,7 +13,7 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS transactions (
         id TEXT PRIMARY KEY,
         date TEXT,
-        desc TEXT,
+        description TEXT,
         amount NUMERIC,
         account TEXT,
         category TEXT,
@@ -46,7 +46,7 @@ async function initDB() {
 
       CREATE TABLE IF NOT EXISTS child_expenses (
         id TEXT PRIMARY KEY,
-        desc TEXT,
+        description TEXT,
         amount NUMERIC,
         cat TEXT,
         date TEXT,
