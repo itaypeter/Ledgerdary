@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "./api.js";
+import { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -74,7 +74,16 @@ const TABS = [
   { id:"family",       label:"Family",       icon:"◈" },
 ];
 
-// Data persistence handled via api.js → backend → PostgreSQL
+/* Storage */
+const store = {
+  async get(key) {
+    try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; }
+    catch { return null; }
+  },
+  async set(key, val) {
+    try { await window.storage.set(key, JSON.stringify(val)); } catch(e) { console.warn(e); }
+  },
+};
 
 function categorize(desc = "") {
   const d = desc.toLowerCase();
@@ -107,7 +116,52 @@ function parseCSV(text, accountId) {
   }).filter(Boolean);
 }
 
-// OCR handled server-side via api.ocrBill / api.ocrGrocery
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = () => rej(new Error("File read failed"));
+    r.readAsDataURL(file);
+  });
+}
+
+async function callClaude(blocks, prompt) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514", max_tokens: 1000,
+      messages: [{ role: "user", content: [...blocks, { type: "text", text: prompt }] }],
+    }),
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const txt = data.content.find(b => b.type === "text")?.text || "";
+  return JSON.parse(txt.replace(/```json\n?|```/g, "").trim());
+}
+
+async function ocrBill(file) {
+  const base64 = await fileToBase64(file);
+  const isImg = file.type.startsWith("image/");
+  const block = isImg
+    ? { type:"image",    source:{ type:"base64", media_type:file.type,          data:base64 } }
+    : { type:"document", source:{ type:"base64", media_type:"application/pdf",  data:base64 } };
+  return callClaude([block], `Extract from this document. Return ONLY valid JSON, no markdown:
+{"vendor":"company name","amount":0.00,"currency":"CHF","date":"DD Mon YYYY",
+"documentType":"bill|receipt|insurance|contract","taxDeductible":true,
+"taxNote":"brief Swiss tax note","summary":"one sentence","category":"Health|Transport|Utilities|Phone/Internet|Insurance|Other"}`);
+}
+
+async function ocrGrocery(file) {
+  const base64 = await fileToBase64(file);
+  const isImg = file.type.startsWith("image/");
+  const block = isImg
+    ? { type:"image",    source:{ type:"base64", media_type:file.type,         data:base64 } }
+    : { type:"document", source:{ type:"base64", media_type:"application/pdf", data:base64 } };
+  return callClaude([block], `Extract grocery receipt. Return ONLY valid JSON, no markdown:
+{"store":"name","date":"DD Mon YYYY","total":0.00,"currency":"CHF",
+"items":[{"name":"item","qty":1,"unitPrice":0.00,"category":"Dairy|Meat|Vegetables|Bakery|Pantry|Beverages|Snacks|Other"}]}`);
+}
 
 /* ── Reusable UI ── */
 function SL({ children }) {
@@ -253,33 +307,44 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const t = await store.get("ml_tx");
-      const d = await store.get("ml_docs");
-      const g = await store.get("ml_gr");
-      const b = await store.get("ml_budgets");
-      if (t?.length) setTx(t);
-      if (d?.length) setDocs(d);
-      if (g?.length) setGR(g);
-      if (b) setBudgets(b);
-      const s = await store.get("ml_subs");
-      const inv = await store.get("ml_inv");
-      const inc = await store.get("ml_income");
-      if (s?.length) setSubs(s);
-      if (inv?.length) setInvestments(inv);
-      if (inc) setMonthlyIncome(inc);
-      const ch = await store.get("ml_child");
-      const cn = await store.get("ml_childname");
-      if (ch?.length) setChildExp(ch);
-      if (cn) setChildName(cn);
+      try {
+        const [txs, docs, gr, ch] = await Promise.all([
+          api.getTransactions(), api.getDocuments(),
+          api.getGroceryReceipts(), api.getChildExpenses(),
+        ]);
+        const [budgetsData, subsData, invData, incData, cnameData] = await Promise.all([
+          api.getSetting("budgets"), api.getSetting("subs"),
+          api.getSetting("investments"), api.getSetting("income"),
+          api.getSetting("childname"),
+        ]);
+        if (txs?.length)  setTx(txs);
+        if (docs?.length) setDocs(docs.map(d => ({
+          ...d,
+          taxDeductible: d.tax_deductible ?? d.taxDeductible,
+          documentType:  d.document_type  ?? d.documentType,
+          taxNote:       d.tax_note       ?? d.taxNote,
+        })));
+        if (gr?.length)      setGR(gr);
+        if (ch?.length)      setChildExp(ch);
+        if (budgetsData)     setBudgets(budgetsData);
+        if (subsData?.length)setSubs(subsData);
+        if (invData?.length) setInvestments(invData);
+        if (incData)         setMonthlyIncome(incData);
+        if (cnameData)       setChildName(cnameData);
+      } catch(e) { console.warn("Load error:", e.message); }
       setLoaded(true);
     })();
   }, []);
 
-  useEffect(() => { if (loaded) api.setSetting("budgets", budgets).catch(()=>{}); }, [budgets, loaded]);
-  useEffect(() => { if (loaded) api.setSetting("subs", subs).catch(()=>{}); }, [subs, loaded]);
-  useEffect(() => { if (loaded) api.setSetting("investments", investments).catch(()=>{}); }, [investments, loaded]);
-  useEffect(() => { if (loaded) api.setSetting("income", monthlyIncome).catch(()=>{}); }, [monthlyIncome, loaded]);
-  useEffect(() => { if (loaded) api.setSetting("childname", childName).catch(()=>{}); }, [childName, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_tx", transactions); },   [transactions, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_docs", documents); },    [documents, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_gr", groceryReceipts); },[groceryReceipts, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_budgets", budgets); },   [budgets, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_subs", subs); },          [subs, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_inv", investments); },    [investments, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_income", monthlyIncome); },[monthlyIncome, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_child", childExpenses); }, [childExpenses, loaded]);
+  useEffect(() => { if (loaded) store.set("ml_childname", childName); }, [childName, loaded]);
 
   const now = new Date();
   const cm = now.getMonth(), cy = now.getFullYear();
@@ -353,31 +418,21 @@ export default function App() {
     reader.onload = e => setCsvPreview(parseCSV(e.target.result, csvAccId));
     reader.readAsText(file, "UTF-8");
   };
-  const confirmImport = async () => {
-    try {
-      const existing = await api.getTransactions();
-      const seen = new Set(existing.map(t=>`${t.date}|${t.desc}|${t.amount}`));
-      const news = (csvPreview||[]).filter(t=>!seen.has(`${t.date}|${t.desc}|${t.amount}`));
-      if (news.length) {
-        await api.addTransactions(news);
-        const all = await api.getTransactions();
-        setTx(all);
-      }
-    } catch(e) { console.error("Import error:", e); }
+  const confirmImport = () => {
+    setTx(prev => {
+      const seen = new Set(prev.map(t=>`${t.date}|${t.desc}|${t.amount}`));
+      return [...prev, ...(csvPreview||[]).filter(t=>!seen.has(`${t.date}|${t.desc}|${t.amount}`))];
+    });
     setCsvPreview(null); setShowImport(false);
   };
 
-  const submitQL = async () => {
+  const submitQL = () => {
     if (!ql.amount) return;
-    const tx = {
+    setTx(prev => [{
       id:`ql-${Date.now()}`, date: new Date().toISOString().slice(0,10),
       desc: ql.desc || ql.cat, amount: -Math.abs(Number(ql.amount)),
       account: ql.acc, category: ql.cat,
-    };
-    try {
-      await api.addTransactions([tx]);
-      setTx(prev => [tx, ...prev]);
-    } catch(e) { console.error("Quick log error:", e); }
+    }, ...prev]);
     setQl({ amount:"", cat:"Lunch/Dining", desc:"", acc:"neon" });
     setShowQL(false);
   };
@@ -385,27 +440,19 @@ export default function App() {
   const handleDocFile = async file => {
     if (!file) return;
     setOcrLoading(true); setOcrResult(null); setOcrErr(null);
-    try { setOcrResult({...(await api.ocrBill(file)),_fn:file.name}); }
+    try { setOcrResult({...(await ocrBill(file)),_fn:file.name}); }
     catch(e) { setOcrErr(e.message); }
     finally { setOcrLoading(false); }
   };
-  const saveDoc = async () => {
+  const saveDoc = () => {
     if (!ocrResult) return;
-    const doc = {...ocrResult, id:`d-${Date.now()}`, vendor:ocrResult.vendor||ocrResult._fn};
-    try {
-      await api.addDocument(doc);
-      setDocs(prev=>[doc,...prev]);
-    } catch(e) { console.error("Save doc error:", e); }
+    setDocs(prev=>[{...ocrResult,id:`d-${Date.now()}`,vendor:ocrResult.vendor||ocrResult._fn},...prev]);
     setOcrResult(null);
   };
 
-  const saveChildEntry = async () => {
+  const saveChildEntry = () => {
     if (!newChild.amount || !newChild.desc) return;
-    const entry = { ...newChild, id:`ce-${Date.now()}`, amount:Number(newChild.amount) };
-    try {
-      await api.addChildExpense(entry);
-      setChildExp(prev => [entry, ...prev]);
-    } catch(e) { console.error("Save child error:", e); }
+    setChildExp(prev => [{ ...newChild, id:`ce-${Date.now()}`, amount:Number(newChild.amount) }, ...prev]);
     setNewChild({ desc:"", amount:"", cat:"Child/School", date: new Date().toISOString().slice(0,10), note:"" });
     setShowAddChild(false);
   };
@@ -413,17 +460,13 @@ export default function App() {
   const handleGrFile = async file => {
     if (!file) return;
     setGrLoading(true); setGrResult(null); setGrErr(null);
-    try { setGrResult(await api.ocrGrocery(file)); }
+    try { setGrResult(await ocrGrocery(file)); }
     catch(e) { setGrErr(e.message); }
     finally { setGrLoading(false); }
   };
-  const saveGrocery = async () => {
+  const saveGrocery = () => {
     if (!grResult) return;
-    const rec = {...grResult, id:`gr-${Date.now()}`};
-    try {
-      await api.addGroceryReceipt(rec);
-      setGR(prev=>[rec,...prev]);
-    } catch(e) { console.error("Save grocery error:", e); }
+    setGR(prev=>[{...grResult,id:`gr-${Date.now()}`},...prev]);
     setGrResult(null);
   };
 
@@ -457,7 +500,7 @@ export default function App() {
             </div>
             <div style={{ display:"flex",gap:8 }}>
               {transactions.length>0 && (
-                <button className="bg" onClick={async()=>{ if(window.confirm("Clear all imported transactions?")){ try{ await api.clearTransactions(); setTx([]); }catch(e){} } }}
+                <button className="bg" onClick={()=>{ if(window.confirm("Clear all imported transactions?")) setTx([]); }}
                   style={{ background:"#FFFFFF",border:"1px solid #D9D5CE",color:"#78716C",fontFamily:"Syne",fontWeight:600,fontSize:11,padding:"8px 13px",borderRadius:8,cursor:"pointer",transition:"background 0.15s" }}>
                   Clear TX
                 </button>
@@ -526,14 +569,14 @@ export default function App() {
                       {t.date} · <span style={{ color:CAT_COLORS[t.category]||"#555" }}>{t.category}</span>
                     </div>
                   </div>
-                  <select value={t.category} onChange={async e=>{ const cat=e.target.value; try{ await api.updateTxCategory(t.id,cat); setTx(prev=>prev.map(x=>x.id===t.id?{...x,category:cat}:x)); }catch(e){} }}
+                  <select value={t.category} onChange={e=>setTx(prev=>prev.map(x=>x.id===t.id?{...x,category:e.target.value}:x))}
                     style={{ background:"transparent",border:"none",color:CAT_COLORS[t.category]||"#555",fontFamily:"DM Mono",fontSize:10,cursor:"pointer",maxWidth:110 }}>
                     {Object.keys(CAT_COLORS).map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                   <div style={{ fontFamily:"DM Mono",fontSize:13,fontWeight:500,flexShrink:0,color:t.amount<0?"#991B1B":"#166534" }}>
                     {t.amount<0?"-":"+"}CHF {Math.abs(t.amount).toFixed(2)}
                   </div>
-                  <button onClick={async()=>{ try{ await api.deleteTransaction(t.id); setTx(prev=>prev.filter(x=>x.id!==t.id)); }catch(e){} }}
+                  <button onClick={()=>setTx(prev=>prev.filter(x=>x.id!==t.id))}
                     style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13,padding:"2px 4px" }}>✕</button>
                 </div>
               ))
@@ -675,7 +718,7 @@ export default function App() {
                     </div>
                     <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                       <span style={{ fontFamily:"DM Mono",fontSize:13,color:"#92400E" }}>CHF {r.total?.toFixed(2)}</span>
-                      <button onClick={async()=>{ try{ await api.deleteGroceryReceipt(r.id); setGR(prev=>prev.filter(x=>x.id!==r.id)); }catch(e){} }} style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13 }}>✕</button>
+                      <button onClick={()=>setGR(prev=>prev.filter(x=>x.id!==r.id))} style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13 }}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -701,7 +744,7 @@ export default function App() {
                   )}
                 </div>
                 <button className="bg" onClick={()=>setViewDoc(doc)} style={{ background:"none",border:"1px solid #D9D5CE",color:"#78716C",borderRadius:7,padding:"5px 12px",fontFamily:"Syne",fontSize:11,cursor:"pointer",transition:"background 0.15s" }}>View</button>
-                <button onClick={async()=>{ try{ await api.deleteDocument(doc.id); setDocs(prev=>prev.filter(d=>d.id!==doc.id)); }catch(e){} }} style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13,padding:"2px 4px" }}>✕</button>
+                <button onClick={()=>setDocs(prev=>prev.filter(d=>d.id!==doc.id))} style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13,padding:"2px 4px" }}>✕</button>
               </div>
             ))}
             <div style={{ marginTop:22 }}>
@@ -1055,7 +1098,7 @@ export default function App() {
                     CHF {Number(e.amount).toFixed(2)}
                   </div>
                   {e.source!=="import" && (
-                    <button onClick={async()=>{ try{ await api.deleteChildExpense(e.id); setChildExp(prev=>prev.filter(x=>x.id!==e.id)); }catch(e2){} }}
+                    <button onClick={()=>setChildExp(prev=>prev.filter(x=>x.id!==e.id))}
                       style={{ background:"none",border:"none",color:"#D9D5CE",cursor:"pointer",fontSize:13,padding:"2px 4px" }}>✕</button>
                   )}
                 </div>
