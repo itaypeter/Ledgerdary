@@ -26,7 +26,7 @@ app.get('*', (req, res) => res.sendFile(path.join(DIST, 'index.html')));
 async function start() {
   try {
     await initDB();
-    app.listen(PORT, () => console.log(`✅ MoneyLens on port ${PORT}`));
+    app.listen(PORT, () => console.log(`✅ Ledgerdary on port ${PORT}`));
   } catch (e) {
     console.error('Failed to start:', e.message);
     process.exit(1);
