@@ -1218,8 +1218,8 @@ export default function App() {
         </div>
 
         <div style={{ padding:"14px 28px",borderTop:"1px solid #EAE7E1",display:"flex",justifyContent:"space-between" }}>
-          <span style={{ fontFamily:"DM Mono",fontSize:10,color:"#C4BDB7" }}>Ledgerdary · data stored in this artifact only · CH/IL</span>
-          <span style={{ fontFamily:"DM Mono",fontSize:10,color:"#C4BDB7" }}>2025–2026</span>
+          <span style={{ fontFamily:"DM Mono",fontSize:10,color:"#C4BDB7" }}>Ledgerdary · your finances, everywhere</span>
+          <span style={{ fontFamily:"DM Mono",fontSize:10,color:"#C4BDB7" }}>2026</span>
         </div>
       </div>
 
