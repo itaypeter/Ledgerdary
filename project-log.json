@@ -1,0 +1,12 @@
+{
+  "lastUpdated": "2026-07-08T14:09:54.000Z",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Review the codebase (backend/ + frontend/) and write a README.md: what Ledgerdary does, architecture, how to run locally and via Docker/Railway",
+      "status": "idea",
+      "createdAt": "2026-07-08T14:09:54.000Z",
+      "source": "user"
+    }
+  ]
+}
