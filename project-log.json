@@ -1,12 +1,33 @@
 {
-  "lastUpdated": "2026-07-08T14:09:54.000Z",
+  "lastUpdated": "2026-07-09T00:00:00.000Z",
   "tasks": [
     {
       "id": 1,
       "title": "Review the codebase (backend/ + frontend/) and write a README.md: what Ledgerdary does, architecture, how to run locally and via Docker/Railway",
-      "status": "idea",
+      "status": "done",
       "createdAt": "2026-07-08T14:09:54.000Z",
+      "completedAt": "2026-07-09T00:00:00.000Z",
       "source": "user"
+    },
+    {
+      "id": 1752019200000,
+      "type": "output",
+      "status": "done",
+      "source": "claude-code",
+      "title": "Added README.md covering architecture, local dev, and Docker/Railway deploy",
+      "note": "✅ What was implemented\nAdded a root-level README.md documenting: what Ledgerdary does (statement import, document/grocery OCR via Claude, spending/tax/annual dashboards, family expenses), the backend/frontend architecture and single-container deploy model, how to run the backend and frontend locally (env vars, ports, Vite proxy), how to build and run via Docker, and how the Railway deploy is configured.\n\n🔍 What to check in the UI:\n- Open README.md at the repo root on GitHub — verify it renders cleanly and the setup steps match your actual .env values.\n\n⚠️ Edge cases / concerns\n- While reading App.jsx to write this, found that the app's initial-load useEffect (frontend/src/App.jsx ~line 371-393) calls `store.get(...)` on load, but `store` is never defined/imported anywhere in the file — this throws a ReferenceError on every page load, so `loaded` never becomes true, transactions/documents/grocery-receipts/child-expenses are never fetched from the backend on startup, and budgets/subs/investments/income/childname/accounts never get persisted back to `/api/settings` (their sync effects are gated on `loaded`). Filed as a follow-up task below rather than fixing in this run to keep this run scoped to the README task.\n\nFiles changed: README.md",
+      "commitUrl": "https://github.com/itaypeter/Ledgerdary/commit/f3d46de571dcd8553ff81f761961929f54893950",
+      "createdAt": "2026-07-09T00:00:00.000Z",
+      "completedAt": "2026-07-09T00:00:00.000Z"
+    },
+    {
+      "id": 1752019200001,
+      "type": "task",
+      "status": "todo",
+      "source": "claude-code",
+      "title": "Fix broken data load on startup: App.jsx calls undefined `store.get()` instead of the `api` client, so all persisted data (transactions, documents, grocery receipts, child expenses) fails to load on page refresh and settings never sync back",
+      "note": "In frontend/src/App.jsx, the initial useEffect (~line 371) awaits `store.get(\"ml_tx\")`, `store.get(\"ml_docs\")`, etc., but no `store` object exists in the file (it's leftover from an earlier local-storage-based version). This throws a ReferenceError inside an un-caught async IIFE, so `setLoaded(true)` is never reached: `loaded` stays false forever, meaning (1) transactions/documents/grocery-receipts/child-expenses are never fetched from the backend via `api.getTransactions()`/`api.getDocuments()`/`api.getGroceryReceipts()`/`api.getChildExpenses()` on mount, and (2) budgets/subs/investments/income/childName/accounts never get pushed to `/api/settings` since those effects are gated on `loaded`. Net effect: on every fresh page load, the dashboard shows empty/default state even though data exists in Postgres. Fix: replace the `store.get(...)` calls with the corresponding `api.get*()` calls (transactions/documents/grocery receipts/child expenses) and `api.getSetting(key)` calls (budgets/subs/investments/income/childname/accounts), matching the pattern already used elsewhere in the file for writes.",
+      "createdAt": "2026-07-09T00:00:00.000Z"
     }
   ]
 }
