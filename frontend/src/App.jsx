@@ -370,24 +370,27 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const t = await store.get("ml_tx");
-      const d = await store.get("ml_docs");
-      const g = await store.get("ml_gr");
-      const b = await store.get("ml_budgets");
-      if (t?.length) setTx(t);
-      if (d?.length) setDocs(d);
-      if (g?.length) setGR(g);
-      if (b) setBudgets(b);
-      const s = await store.get("ml_subs");
-      const inv = await store.get("ml_inv");
-      const inc = await store.get("ml_income");
-      if (s?.length) setSubs(s);
-      if (inv?.length) setInvestments(inv);
-      if (inc) setMonthlyIncome(inc);
-      const ch = await store.get("ml_child");
-      const cn = await store.get("ml_childname");
-      if (ch?.length) setChildExp(ch);
-      if (cn) setChildName(cn);
+      try {
+        const [t, d, g, b] = await Promise.all([
+          api.getTransactions(), api.getDocuments(), api.getGroceryReceipts(), api.getSetting("budgets"),
+        ]);
+        if (t?.length) setTx(t);
+        if (d?.length) setDocs(d);
+        if (g?.length) setGR(g);
+        if (b) setBudgets(b);
+        const [s, inv, inc, acc] = await Promise.all([
+          api.getSetting("subs"), api.getSetting("investments"), api.getSetting("income"), api.getSetting("accounts"),
+        ]);
+        if (s?.length) setSubs(s);
+        if (inv?.length) setInvestments(inv);
+        if (inc) setMonthlyIncome(inc);
+        if (acc?.length) setAccounts(acc);
+        const [ch, cn] = await Promise.all([
+          api.getChildExpenses(), api.getSetting("childname"),
+        ]);
+        if (ch?.length) setChildExp(ch);
+        if (cn) setChildName(cn);
+      } catch (e) { /* fall through to setLoaded so writes/edits still work */ }
       setLoaded(true);
     })();
   }, []);
