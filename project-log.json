@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-07-09T00:00:00.000Z",
+  "lastUpdated": "2026-07-10T01:20:00.000Z",
   "tasks": [
     {
       "id": 1,
@@ -23,11 +23,23 @@
     {
       "id": 1752019200001,
       "type": "task",
-      "status": "todo",
+      "status": "done",
       "source": "claude-code",
       "title": "Fix broken data load on startup: App.jsx calls undefined `store.get()` instead of the `api` client, so all persisted data (transactions, documents, grocery receipts, child expenses) fails to load on page refresh and settings never sync back",
       "note": "In frontend/src/App.jsx, the initial useEffect (~line 371) awaits `store.get(\"ml_tx\")`, `store.get(\"ml_docs\")`, etc., but no `store` object exists in the file (it's leftover from an earlier local-storage-based version). This throws a ReferenceError inside an un-caught async IIFE, so `setLoaded(true)` is never reached: `loaded` stays false forever, meaning (1) transactions/documents/grocery-receipts/child-expenses are never fetched from the backend via `api.getTransactions()`/`api.getDocuments()`/`api.getGroceryReceipts()`/`api.getChildExpenses()` on mount, and (2) budgets/subs/investments/income/childName/accounts never get pushed to `/api/settings` since those effects are gated on `loaded`. Net effect: on every fresh page load, the dashboard shows empty/default state even though data exists in Postgres. Fix: replace the `store.get(...)` calls with the corresponding `api.get*()` calls (transactions/documents/grocery receipts/child expenses) and `api.getSetting(key)` calls (budgets/subs/investments/income/childname/accounts), matching the pattern already used elsewhere in the file for writes.",
-      "createdAt": "2026-07-09T00:00:00.000Z"
+      "createdAt": "2026-07-09T00:00:00.000Z",
+      "completedAt": "2026-07-10T01:20:00.000Z"
+    },
+    {
+      "id": 1752110400000,
+      "type": "output",
+      "status": "done",
+      "source": "claude-code",
+      "title": "Fixed broken startup data load — App.jsx now uses the real api client instead of an undefined store object",
+      "note": "✅ What was implemented\nReplaced every `store.get(...)` call in the mount-time useEffect (frontend/src/App.jsx) with the matching `api.get*()` / `api.getSetting(key)` calls: transactions, documents, grocery receipts, and child expenses now load via their dedicated endpoints, and budgets/subs/investments/income/childname/accounts load via `api.getSetting`. Also fixed a latent bug where `accounts` was written to `/api/settings/accounts` on every change but never read back on load — it's now restored on mount too. Wrapped the whole load in try/catch so a single failed fetch can't block `setLoaded(true)` (which un-gates the settings-sync effects).\n\n🔍 What to check in the UI:\n- Import some transactions / add a document, then hard-refresh the page — they should still be there (previously the dashboard would silently reset to empty defaults every time).\n- Edit an account balance, refresh — balance should persist (this was silently broken before since the read-back never happened even prior to the store.get bug).\n- Open the browser console on load — there should be no ReferenceError.\n\n⚠️ Edge cases / concerns\n- None known; verified against a real Postgres-backed instance of the backend with seeded transaction/settings data — the dashboard's transaction count, monthly spend, and settings all reflected the seeded values correctly after a fresh page load, which reproduces the exact failure mode this fixes.\n\nFiles changed: frontend/src/App.jsx, .gitignore (added — node_modules/dist/playwright-screenshots were untracked but had no ignore rule)",
+      "commitUrl": "https://github.com/itaypeter/Ledgerdary/commit/cb7bdcfafb8cc988cffa6f729de514411e6a4fec",
+      "createdAt": "2026-07-10T01:20:00.000Z",
+      "completedAt": "2026-07-10T01:20:00.000Z"
     }
   ]
 }
